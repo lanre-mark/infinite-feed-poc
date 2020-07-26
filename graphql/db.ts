@@ -26,3 +26,5 @@ class AsyncDatabase {
     })
   }
 }
+
+export default new AsyncDatabase(path.join(process.cwd(), 'db.sqlite'))
