@@ -1,21 +1,25 @@
 import { useQuery } from '@apollo/client'
-import Layout from 'components/Layout'
-import Card from 'components/Card'
-import NewsFeed from 'components/NewsFeed'
 import { useEffect, useState } from 'react'
+import styled from 'styled-components'
+import Card from 'components/Card'
+import Layout from 'components/Layout'
+import NewsFeed from 'components/NewsFeed'
 import { GET_FEEDS, Feed, QueryData, QueryVars } from 'pages/Payload'
 
 const MAX_FEEDS = 3;
 
 const hasMoreFeeds = (page: number, limit: number, total: number) => {
-  const startIndex = (page - 1) * limit + 1;
-  return total === 0 || startIndex < total;
+  if(total === 0 || total < limit){
+    return false;
+  };
+  return true;
 }
 
-const initialParams = { currentPage: 1, skipped: 0, total: 0, fellowship: "founders" };
+const initialParams = { currentPage: 1, skipped: 0};
 
 export default function FeedSlot() {
   const [isRendering, setIsRendering] = useState(false);
+  const [fellowship, setFellowship] = useState("founder");
   const [pager, setPager] = useState(initialParams);
   const [total, setTotal] = useState(MAX_FEEDS);
   const [feeds, setFeeds] = useState(new Array<Feed>());
@@ -25,7 +29,9 @@ export default function FeedSlot() {
      const anchor = e.target.closest("a");   // Find closest Anchor (or self)
      if (!anchor) return;    
      let p = Object.assign({}, initialParams);
-     p.fellowship = anchor.getAttribute('href');
+     setFellowship(anchor.getAttribute('href'));
+     setTotal(MAX_FEEDS);
+     setFeeds(new Array<Feed>());
      setPager(p);
   };
 
@@ -41,12 +47,12 @@ export default function FeedSlot() {
   }
 
   const addFeeds = (data: any) => {
-    if (!data.announcements) return;
+    if (!data.feeds) return;
     setIsRendering(true);
     setTimeout(() => {
       setIsRendering(false);
-      setTotal(data.announcements.length);
-      setFeeds(feeds.concat(data.announcements));
+      setTotal(data.feeds.length);
+      setFeeds(feeds.concat(data.feeds));
     }, 1000);
   };
 
@@ -59,8 +65,8 @@ export default function FeedSlot() {
 
   const { data, error, loading } = useQuery<QueryData, QueryVars>(
     GET_FEEDS, {
-    skip: !pager.fellowship,
-    variables: { fellowship: pager.fellowship, limit: MAX_FEEDS, skip: pager.skipped },
+    skip: !fellowship,
+    variables: { fellowship: fellowship, limit: MAX_FEEDS, skip: pager.skipped },
     onCompleted: addFeeds
   }
   );
@@ -72,14 +78,41 @@ export default function FeedSlot() {
 
   return (
     <>
-      <h2>Fellowship News</h2>
-      <ul style={{listStyleType: "none", margin: 0, padding: 0}}>
-        <li style={{display: "inline"}}><a href="angels" onClick={handleClick}>Angels</a></li>
-        <li><a href="founders" onClick={handleClick}>Founders</a></li>
-        <li><a href="writers" onClick={handleClick}>Writers</a></li>
-      </ul>
+      <Toolbar>
+        <ToolTitle><Tool>Fellowship News</Tool></ToolTitle>
+        <ToolbarItem><Tool href="angels" onClick={handleClick}>Angel Investors</Tool></ToolbarItem>
+        <ToolbarItem><Tool href="founders" onClick={handleClick}>Startup Founders</Tool></ToolbarItem>
+        <ToolbarItem><Tool href="writers" onClick={handleClick}>Writers</Tool></ToolbarItem>
+      </Toolbar>
       {(loading || isRendering) && <Card><p>...loading</p></Card>}
-      <NewsFeed feeds={data.feeds} />
+      <NewsFeed feeds={feeds} />
     </>
   )
 }
+
+
+const Toolbar = styled.ul`
+  width: 600px;
+  list-style-type: none;
+  background-color: #ffff;
+`;
+
+const ToolbarItem = styled.li`
+  display: inline;
+  padding: 10px;
+  float: right;
+`;
+
+const ToolTitle = styled.li`
+  display: inline;
+  padding: 0px;
+  float: left;
+  font-weight:bold;
+  font-size: 2em;
+`;
+
+const Tool = styled.a`
+  display: block;
+  padding: 8px 16px;
+  text-decoration: none;
+`; 
